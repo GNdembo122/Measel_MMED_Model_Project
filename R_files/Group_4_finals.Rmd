@@ -1,0 +1,274 @@
+---
+title: "Untitled"
+author: "me"
+date: "2024-06-12"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+rm(list = ls())
+```
+
+We computer our Beta with respecte to R0 and our parameters
+```{r}
+beta.calc <- function(Ro,mu=0.02/365.25,sigma=1/8,gamma=1/5){
+  Ro/((sigma/(mu+sigma))*(1/(mu+gamma)))
+}
+```
+
+
+We set up our seir model be including nu the birth rate and p the vaccination proportion. By add the proportion of the new birth that were not vaccinated to the susceptible compartment and the vaccinated proportion to the Recovered compartiment. we define the time (t) the number of years we are interest in simulating. We use linear ODE solver from R's deSolve to solve iterative over the number of days in t and computed the value of all compartment at each iteration.
+
+```{r}
+# Load necessary libraries
+library(deSolve)  # for ode solving
+library(ggplot2)  # for plotting
+library(glue)
+
+# Define SEIR model function with seasonal transmission rate
+SEIR_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), {
+	beta_t <- beta_0 * (1 + A * sin(2 * pi * time / T))
+	inc <- sigma * E
+	N <- S +E + I + R
+	dS_dt <- nu*(1-p) - ((beta_t * I )/N + mu) * S
+	dE_dt <- beta_t * S * I - (sigma + mu) * E
+	dI_dt <- sigma * E - (gamma + mu) * I
+	dR_dt <- (nu * p )+ gamma * I - mu * R
+	return(list(c(dS_dt, dE_dt, dI_dt, dR_dt,inc)))
+  })
+}
+
+
+# Time points (in days)
+t <- seq(0,7*365,1)
+N0 <- 1
+
+```
+
+For study, we consider different values of nu and p and simulate  the with the model and observer the interaction of each compartment. The aim is know what proportion of the new birth need to be vaccinated in order to achieve a disease free equilibrium. 
+```{r}
+# Initial conditions
+initial_state <- c(S = N0 * 0.95, E = N0 * 0.05, I = N0 *0, R = N0 *0, inc = 0)
+
+# Parameters
+parameters <- list(
+  beta_0 = beta.calc(2),
+  A = 0.08,
+  T = 365,  # Period of one year in days
+  sigma = 1/8,
+  gamma = 1/5,
+  nu = 0.09 * N0 ,
+  mu = 0.02,
+  p = 0.9,
+  N = N0
+  
+)
+
+# Solve the SEIR equations
+output <- ode(y = initial_state, times = t, func = SEIR_model, parms = parameters)
+
+# Convert output to data frame for plotting
+output_df <- as.data.frame(output)
+weekly.report <- output_df[seq(1, nrow(output_df), by = 7),]
+```
+
+```{r}
+plot.param <- function(weekly.report){
+# Plotting using ggplot2
+ggplot(weekly.report, aes(x = time/365)) +
+  geom_line(aes(y = S, color = "Susceptible")) +
+  geom_line(aes(y = E, color = "Exposed")) +
+  geom_line(aes(y = I, color = "Infectious")) +
+  geom_line(aes(y = R, color = "Recovered")) +
+  labs(x = "Time (Year)", y = "Fraction of population", color = "Compartment") +
+  ggtitle(glue("SEIR Model at Nu = {parameters['nu']} and P = {parameters['p']}")) +
+  theme_minimal() +
+  scale_color_manual(values = c("Susceptible" = "blue", "Exposed" = "black", "Infectious" = "red", "Recovered" = "green"))
+}
+```
+
+```{r}
+plot.param(weekly.report)
+```
+
+```{r}
+run.simu <- function(parameters){
+  # Solve the SEIR equations
+output <- ode(y = initial_state, times = t, func = SEIR_model, parms = parameters)
+
+# Convert output to data frame for plotting
+output_df <- as.data.frame(output)
+weekly.report <- output_df[seq(1, nrow(output_df), by = 7),]
+plot.param(weekly.report)
+}
+```
+
+for Nu = 0.12 and 0.25
+```{r}
+parameters["nu"] <- 0.012 * N0
+parameters["p"] <- 0.25
+
+run.simu(parameters = parameters)
+
+```
+
+Nu = 0.012, p = 0.5
+
+```{r}
+parameters["nu"] <- 0.012 * N0
+parameters["p"] <- 0.5
+
+run.simu(parameters = parameters)
+```
+Nu = 0.012 p = 0.75
+```{r}
+parameters["nu"] <- 0.012 * N0
+parameters["p"] <- 0.75
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.015 p = 0.25
+```{r}
+parameters["nu"] <- 0.015 * N0
+parameters["p"] <- 0.25
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.015 p = 0.5
+```{r}
+parameters["nu"] <- 0.015 * N0
+parameters["p"] <- 0.5
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.015 p = 0.75
+```{r}
+parameters["nu"] <- 0.015 * N0
+parameters["p"] <- 0.75
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.019 p = 0.25
+```{r}
+parameters["nu"] <- 0.019 * N0
+parameters["p"] <- 0.25
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.019 p = 0.5
+```{r}
+parameters["nu"] <- 0.019 * N0
+parameters["p"] <- 0.5
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.019 p = 0.75
+```{r}
+parameters["nu"] <- 0.019 * N0
+parameters["p"] <- 0.75
+
+run.simu(parameters = parameters)
+```
+
+
+
+Nu = 0.02 p = 0.25
+```{r}
+parameters["nu"] <- 0.02 * N0
+parameters["p"] <- 0.25
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.02 p = 0.5
+```{r}
+parameters["nu"] <- 0.02 * N0
+parameters["p"] <- 0.5
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.02 p = 0.75
+```{r}
+parameters["nu"] <- 0.02 * N0
+parameters["p"] <- 0.75
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.025 p = 0.25
+```{r}
+parameters["nu"] <- 0.025 * N0
+parameters["p"] <- 0.25
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.025 p = 0.5
+```{r}
+parameters["nu"] <- 0.025 * N0
+parameters["p"] <- 0.5
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.025 p = 0.75
+```{r}
+parameters["nu"] <- 0.025 * N0
+parameters["p"] <- 0.75
+
+run.simu(parameters = parameters)
+```
+
+
+
+Nu = 0.03 p = 0.5
+```{r}
+parameters["nu"] <- 0.019 * N0
+parameters["p"] <- 0.25
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.05 p = 0.5
+```{r}
+parameters["nu"] <- 0.04 * N0
+parameters["p"] <- 0.5
+
+run.simu(parameters = parameters)
+```
+
+
+Nu = 0.09 p = 0.5
+```{r}
+parameters["nu"] <- 0.09 * N0
+parameters["p"] <- 0.75
+
+run.simu(parameters = parameters)
+```
